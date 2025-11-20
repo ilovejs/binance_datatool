@@ -46,14 +46,10 @@ class AwsClient:
         Returns:
             dict: Parsed XML data as a nested Python dictionary
         """
-        from bdt_common.log_kit import logger
-
-        logger.debug(f"🌐 Fetching XML from: {url}")
         # Perform async HTTP GET request with optional proxy support
         async with self.session.get(url, proxy=self.http_proxy) as resp:
             # Read response text content (XML format)
             data = await resp.text()
-            logger.debug(f"✅ Received {len(data)} bytes from AWS")
 
         # Parse XML string into Python dictionary structure
         return xmltodict.parse(data)

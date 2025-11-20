@@ -37,7 +37,9 @@ def aria2_download_files(
         mode="w", delete_on_close=False, prefix="bhds_"
     ) as aria_file:
         # Write each download URL and its target directory to the temp file
+        # Also ensure parent directories exist
         for aws_url, local_file in download_infos:
+            local_file.parent.mkdir(parents=True, exist_ok=True)
             aria_file.write(f"{aws_url}\n  dir={local_file.parent}\n")
         aria_file.close()
 
@@ -130,6 +132,11 @@ class AwsDownloader:
 
         total_files = len(download_infos)
         logger.info(f"📦 Total files to process: {total_files}")
+
+        if total_files > 0 and self.verbose:
+            # Show example of where files will be downloaded
+            sample_local = download_infos[0][1]
+            logger.info(f"📂 Example download path: {sample_local}")
 
         # Retry loop for handling failed downloads
         for try_id in range(max_tries):

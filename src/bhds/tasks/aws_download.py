@@ -49,8 +49,10 @@ class AwsDownloadTask:
             or os.getenv("http_proxy")
         )
         self.use_proxy_for_aria2c = self.config.get("use_proxy_for_aria2c", False)
+        logger.info(f"📁 BHDS home: {bhds_home}")
+        logger.info(f"📁 Download directory: {self.aws_data_dir}")
         logger.info(
-            f"Data directory: {self.aws_data_dir}, HTTP proxy: {self.http_proxy}, "
+            f"🌐 HTTP proxy: {self.http_proxy or 'None'}, "
             f"Use proxy for aria2c: {self.use_proxy_for_aria2c}"
         )
 
@@ -126,37 +128,31 @@ class AwsDownloadTask:
             client: AWS data client used to list and build file paths.
             symbols: Symbols to download.
         """
-        logger.info(
-            f"📊 Processing {len(symbols)} symbols: {', '.join(symbols[:10])}{'...' if len(symbols) > 10 else ''}"
-        )
+        logger.info(f"📊 Processing {len(symbols)} symbols...")
 
         logger.info(f"🔍 Fetching file lists for {len(symbols)} symbols from AWS...")
         files_map = await client.batch_list_data_files(symbols)
 
-        # Log per-symbol file counts
-        symbol_file_counts = {symbol: len(files) for symbol, files in files_map.items()}
-        total_files = sum(symbol_file_counts.values())
-
+        # Log summary
+        total_files = sum(len(files) for files in files_map.values())
         if total_files == 0:
             logger.warning("No files found")
             return
 
-        logger.info(
-            f"📊 Total files found: {total_files} across {len(symbols)} symbols"
-        )
-        logger.info(f"   Average files per symbol: {total_files / len(symbols):.1f}")
-        logger.info(
-            f"   Top symbols by file count: {sorted(symbol_file_counts.items(), key=lambda x: x[1], reverse=True)[:5]}"
-        )
-
-        all_files = sorted(chain.from_iterable(files_map.values()))
+        logger.info(f"📊 Total: {total_files} files across {len(symbols)} symbols")
 
         # Only pass http_proxy to AwsDownloader if use_proxy_for_aria2c is True
         proxy_for_downloader = self.http_proxy if self.use_proxy_for_aria2c else None
         downloader = AwsDownloader(
-            local_dir=self.aws_data_dir, http_proxy=proxy_for_downloader, verbose=True
+            local_dir=self.aws_data_dir, http_proxy=proxy_for_downloader, verbose=False
         )
-        downloader.aws_download(all_files)
+
+        # Download per symbol and report progress
+        for idx, (symbol, files) in enumerate(files_map.items(), 1):
+            if not files:
+                continue
+            downloader.aws_download(files)
+            logger.ok(f"✅ [{idx}/{len(symbols)}] {symbol} saved ({len(files)} files)")
 
     def _verify_files(self, client: AwsClient) -> None:
         """Verify checksums for downloaded files and optionally delete mismatches.
