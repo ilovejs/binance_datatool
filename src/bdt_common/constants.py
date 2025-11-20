@@ -1,5 +1,8 @@
 HTTP_TIMEOUT_SEC = 30
 
+# Aria2c settings
+ARIA2C_QUIET = True  # Set to False to see aria2c progress logs
+
 # For Binance AWS Data Center
 BINANCE_AWS_PREFIX = "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision"
 BINANCE_AWS_DATA_PREFIX = "https://data.binance.vision"

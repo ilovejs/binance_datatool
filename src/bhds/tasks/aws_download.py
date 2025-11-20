@@ -144,7 +144,7 @@ class AwsDownloadTask:
         # Only pass http_proxy to AwsDownloader if use_proxy_for_aria2c is True
         proxy_for_downloader = self.http_proxy if self.use_proxy_for_aria2c else None
         downloader = AwsDownloader(
-            local_dir=self.aws_data_dir, http_proxy=proxy_for_downloader, verbose=False
+            local_dir=self.aws_data_dir, http_proxy=proxy_for_downloader
         )
 
         # Download per symbol and report progress
