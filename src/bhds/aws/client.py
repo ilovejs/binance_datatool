@@ -46,10 +46,14 @@ class AwsClient:
         Returns:
             dict: Parsed XML data as a nested Python dictionary
         """
+        from bdt_common.log_kit import logger
+
+        logger.debug(f"🌐 Fetching XML from: {url}")
         # Perform async HTTP GET request with optional proxy support
         async with self.session.get(url, proxy=self.http_proxy) as resp:
             # Read response text content (XML format)
             data = await resp.text()
+            logger.debug(f"✅ Received {len(data)} bytes from AWS")
 
         # Parse XML string into Python dictionary structure
         return xmltodict.parse(data)
@@ -92,7 +96,9 @@ class AwsClient:
             # Process subdirectories (CommonPrefixes) and files (Contents)
             if "CommonPrefixes" in xml_data:
                 # CommonPrefixes contains directory-like prefixes
-                results.extend([PurePosixPath(x["Prefix"]) for x in xml_data["CommonPrefixes"]])
+                results.extend(
+                    [PurePosixPath(x["Prefix"]) for x in xml_data["CommonPrefixes"]]
+                )
             elif "Contents" in xml_data:
                 # Contents contains actual file objects
                 results.extend([PurePosixPath(x["Key"]) for x in xml_data["Contents"]])
@@ -130,7 +136,9 @@ class AwsClient:
         symbol_dir = self.get_symbol_dir(symbol)
         return await self.list_dir(symbol_dir)
 
-    async def batch_list_data_files(self, symbols: list[str]) -> dict[str, list[PurePosixPath]]:
+    async def batch_list_data_files(
+        self, symbols: list[str]
+    ) -> dict[str, list[PurePosixPath]]:
         """
         List data files for multiple symbols concurrently.
 
@@ -190,7 +198,10 @@ def create_aws_client_from_config(
     """
 
     path_builder = create_path_builder(
-        trade_type=trade_type, data_freq=data_freq, data_type=data_type, time_interval=time_interval
+        trade_type=trade_type,
+        data_freq=data_freq,
+        data_type=data_type,
+        time_interval=time_interval,
     )
 
     return AwsClient(

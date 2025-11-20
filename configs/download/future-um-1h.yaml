@@ -1,0 +1,35 @@
+# BHDS Spot K-line Download Task
+
+# Data type, Options: "klines", "fundingRate", "metrics", "aggTrades", "liquidationSnapshot"
+data_type: "klines"
+
+# Trade type, Options: "spot", "futures/um", "futures/cm"
+# usdt-margin vs coin-margin
+trade_type: "futures/um"
+
+# Binance packaging frequency, Options: "daily", "monthly"
+data_freq: "daily"
+
+# Supported intervals: "1m", "5m", "1h", "1d"
+time_interval: "1h"
+
+# Symbol filtering
+symbol_filter:
+  quote: "USDT" # USDT quote asset
+  stable_pairs: false # Exclude stable pairs (e.g., USDC/USDT trading pairs)
+  leverage_tokens: false # Exclude leverage tokens (tokens with UP/DOWN/BULL/BEAR in name)
+
+# BHDS home directory for data storage
+# If not set, uses environment variable BHDS_HOME, defaults to ~/crypto_data/bhds
+# AWS data will be downloaded to bhds_home/aws_data
+bhds_home: null
+
+# HTTP proxy, uses environment HTTP_PROXY if not set
+http_proxy: null
+
+# Whether to apply HTTP proxy for aria2c downloads
+use_proxy_for_aria2c: false
+
+# Checksum verification configuration
+checksum_verification:
+  delete_mismatch: true # Delete files on checksum mismatch

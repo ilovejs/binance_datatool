@@ -17,7 +17,8 @@ from bhds.aws.checksum import ChecksumVerifier
 from bhds.aws.client import AwsClient, create_aws_client_from_config
 from bhds.aws.downloader import AwsDownloader
 from bhds.aws.local import LocalAwsClient
-from bhds.tasks.common import create_symbol_filter_from_config, get_bhds_home, load_config
+from bhds.tasks.common import (create_symbol_filter_from_config, get_bhds_home,
+                               load_config)
 
 
 class AwsDownloadTask:
@@ -26,6 +27,7 @@ class AwsDownloadTask:
 
     The task loads config, filters target symbols, downloads missing archives, and optionally verifies checksums.
     """
+
     def __init__(self, config_path: str | Path):
         """Initialize the download task from a YAML configuration.
 
@@ -41,7 +43,11 @@ class AwsDownloadTask:
         # Get top-level params
         bhds_home = get_bhds_home(self.config.get("bhds_home"))
         self.aws_data_dir = bhds_home / "aws_data"
-        self.http_proxy = self.config.get("http_proxy") or os.getenv("HTTP_PROXY") or os.getenv("http_proxy")
+        self.http_proxy = (
+            self.config.get("http_proxy")
+            or os.getenv("HTTP_PROXY")
+            or os.getenv("http_proxy")
+        )
         self.use_proxy_for_aria2c = self.config.get("use_proxy_for_aria2c", False)
         logger.info(
             f"Data directory: {self.aws_data_dir}, HTTP proxy: {self.http_proxy}, "
@@ -50,7 +56,9 @@ class AwsDownloadTask:
 
         if "trade_type" not in self.config:
             raise KeyError("Missing 'trade_type' in config")
-        self.trade_type = TradeType(self.config["trade_type"])  # e.g. "spot", "futures/um", "futures/cm"
+        self.trade_type = TradeType(
+            self.config["trade_type"]
+        )  # e.g. "spot", "futures/um", "futures/cm"
 
         if "data_type" not in self.config:
             raise KeyError("Missing 'data_type' in config")
@@ -58,7 +66,9 @@ class AwsDownloadTask:
 
         if "data_freq" not in self.config:
             raise KeyError("Missing 'data_freq' in config")
-        self.data_freq = DataFrequency(self.config["data_freq"])  # e.g. "daily", "monthly"
+        self.data_freq = DataFrequency(
+            self.config["data_freq"]
+        )  # e.g. "daily", "monthly"
 
         self.verification_config: dict = self.config.get("checksum_verification")
 
@@ -101,7 +111,9 @@ class AwsDownloadTask:
 
         # Fallback to configured symbol filter
         filtered = self._apply_symbol_filter(all_symbols)
-        logger.info(f"Found {len(all_symbols)} total symbols, Filtered to {len(filtered)} symbols")
+        logger.info(
+            f"Found {len(all_symbols)} total symbols, Filtered to {len(filtered)} symbols"
+        )
         return filtered
 
     async def _download_files(self, client: AwsClient, symbols: list[str]) -> None:
@@ -114,18 +126,36 @@ class AwsDownloadTask:
             client: AWS data client used to list and build file paths.
             symbols: Symbols to download.
         """
-        logger.debug(f"📊 Processing symbols: {symbols[:5]}{'...' if len(symbols) > 5 else ''}")
+        logger.info(
+            f"📊 Processing {len(symbols)} symbols: {', '.join(symbols[:10])}{'...' if len(symbols) > 10 else ''}"
+        )
 
+        logger.info(f"🔍 Fetching file lists for {len(symbols)} symbols from AWS...")
         files_map = await client.batch_list_data_files(symbols)
-        all_files = sorted(chain.from_iterable(files_map.values()))
-        if not all_files:
+
+        # Log per-symbol file counts
+        symbol_file_counts = {symbol: len(files) for symbol, files in files_map.items()}
+        total_files = sum(symbol_file_counts.values())
+
+        if total_files == 0:
             logger.warning("No files found")
             return
 
-        logger.debug(f"📥 Total files found: {len(all_files)}, downloading missings...")
+        logger.info(
+            f"📊 Total files found: {total_files} across {len(symbols)} symbols"
+        )
+        logger.info(f"   Average files per symbol: {total_files / len(symbols):.1f}")
+        logger.info(
+            f"   Top symbols by file count: {sorted(symbol_file_counts.items(), key=lambda x: x[1], reverse=True)[:5]}"
+        )
+
+        all_files = sorted(chain.from_iterable(files_map.values()))
+
         # Only pass http_proxy to AwsDownloader if use_proxy_for_aria2c is True
         proxy_for_downloader = self.http_proxy if self.use_proxy_for_aria2c else None
-        downloader = AwsDownloader(local_dir=self.aws_data_dir, http_proxy=proxy_for_downloader, verbose=True)
+        downloader = AwsDownloader(
+            local_dir=self.aws_data_dir, http_proxy=proxy_for_downloader, verbose=True
+        )
         downloader.aws_download(all_files)
 
     def _verify_files(self, client: AwsClient) -> None:
@@ -136,7 +166,9 @@ class AwsDownloadTask:
         """
         divider("BHDS: Verifying Downloaded Files", sep="-")
 
-        verifier = ChecksumVerifier(delete_mismatch=self.verification_config.get("delete_mismatch", False))
+        verifier = ChecksumVerifier(
+            delete_mismatch=self.verification_config.get("delete_mismatch", False)
+        )
 
         # Use LocalAwsClient to get all unverified files
         local_client = LocalAwsClient(self.aws_data_dir, client.path_builder)
@@ -149,7 +181,9 @@ class AwsDownloadTask:
         if all_unverified_files:
             logger.debug(f"🔍 Verifying {len(all_unverified_files)} files")
             results = verifier.verify_files(all_unverified_files)
-            logger.ok(f"Verification complete: {results['success']} success, {results['failed']} failed")
+            logger.ok(
+                f"Verification complete: {results['success']} success, {results['failed']} failed"
+            )
         else:
             logger.ok("All files already verified")
 

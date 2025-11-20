@@ -52,8 +52,12 @@ BHDS provides two interfaces for quantitative traders. **CLI interface is recomm
 Built with [Typer](https://typer.tiangolo.com/), the CLI provides a streamlined workflow using YAML configurations:
 
 ```bash
-# Show available commands
 uv run bhds --help
+
+mkdir -p /Users/miczhuang/crypto_data/bhds/holo_1m_klines/spot
+
+uv run bhds aws-download configs/download/spot_1h.yaml
+uv run bhds aws-download configs/download/future-um-1h.yaml
 
 # Download historical data
 uv run bhds aws-download configs/download/spot_kline.yaml
