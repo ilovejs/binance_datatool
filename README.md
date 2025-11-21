@@ -99,29 +99,41 @@ asyncio.run(main())
 
 See [examples/](examples/) for complete usage patterns including data download and processing workflows.
 
-## Invalid file resolution:
+## Failed Files Management
 
-### To Redownload the Invalid Files:
-Simply run the same command again:
-`uv run bhds aws-download configs/download/spot_1h.yaml`
+BHDS tracks failed downloads and verifications in `.failed_files.json` within your `aws_data` directory. This allows you to easily retry only the failed files without rescanning everything.
 
-### What happens:
-The verifier already deleted the 4 invalid files (because `delete_mismatch: true`)
-The downloader will detect those 4 files are missing
-It will redownload only those 4 missing files
-The verification will run again
-### How It Works:
-Looking at `checksum.py:106-108`, when a file fails verification:
-If delete_mismatch: true, it calls `_cleanup_files()` which deletes:
-    The corrupted data file
-    The .verified marker file
-    The .CHECKSUM file
-Then when you run the download command again, those missing files will be redownloaded.
+### Inspecting Failed Files
 
-### Alternative: Manual Investigation
-If you want to see which specific files failed, check if there were any error messages in the output above the verification summary.
+You can list all currently tracked failed files using the CLI:
 
-The failed files are tracked in results["errors"] at checksum.py:142, but they're not currently logged to the console. The current implementation only shows the count. 
+```bash
+uv run bhds failed-files --list
+```
 
-TL;DR: Just rerun uv run bhds aws-download configs/download/spot_1h.yaml - the 4 failed files were already deleted and will be redownloaded automatically.
+This will show the file path, the error message, and the number of failed attempts.
+
+### Retrying Failed Files
+
+To retry downloading only the failed files:
+
+```bash
+uv run bhds failed-files --retry
+```
+
+This command will:
+1. Read the list of failed files.
+2. Redownload the data files and their checksums.
+3. (Note: Verification must be run separately via `aws-download` or `make download` if you want to verify again immediately, although `aws-download` also includes auto-retry logic).
+
+**Note:** The standard `aws-download` command (and `make download`) automatically checks for failed files and retries them *before* starting the normal download process. The `failed-files --retry` command is useful if you want to *only* retry failures without triggering the full download workflow.
+
+### Clearing the Tracker
+
+If you want to ignore the failed files (e.g., you know they are permanently unavailable), you can clear the tracker:
+
+```bash
+uv run bhds failed-files --clear
+```
+
 

@@ -14,6 +14,7 @@ from bhds.tasks.aws_download import AwsDownloadTask
 from bhds.tasks.holo_1m_kline import GenHolo1mKlineTask
 from bhds.tasks.holo_resample import HoloResampleTask
 from bhds.tasks.parse_aws_data import ParseAwsDataTask
+from bhds.tasks.failed_files_task import FailedFilesTask
 
 from . import __version__
 
@@ -74,6 +75,29 @@ def resample(config_paths: list[str] = typer.Argument(..., help="Paths to YAML c
         except Exception as e:
             logger.exception(f"Error running resample task for {config_path}: {e}")
             raise typer.Exit(1)
+
+
+@app.command()
+def failed_files(
+    list_files: bool = typer.Option(False, "--list", "-l", help="List all failed files"),
+    retry: bool = typer.Option(False, "--retry", "-r", help="Retry downloading failed files"),
+    clear: bool = typer.Option(False, "--clear", "-c", help="Clear the failed files tracker"),
+):
+    """Manage failed files (list, retry, clear)."""
+    task = FailedFilesTask()
+    
+    if list_files:
+        task.list_failed()
+    
+    if retry:
+        task.retry()
+        
+    if clear:
+        task.clear()
+        
+    if not (list_files or retry or clear):
+        typer.echo("Please specify an action: --list, --retry, or --clear")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":
