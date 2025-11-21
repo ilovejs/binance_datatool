@@ -74,11 +74,11 @@ def validate_and_cleanup_invalid_checksums(data_files: list[Path]) -> list[Path]
         # Check if checksum file is missing
         if not checksum_file.exists():
             logger.warning(
-                f"🗑️  Missing checksum file: {checksum_file.name}, deleting data file..."
+                f"🗑️  Missing checksum file: {checksum_file.name}, marking for checksum redownload..."
             )
-            # Delete data file so both get redownloaded
-            if data_file.exists():
-                data_file.unlink()
+            # Do NOT delete data file, only redownload checksum
+            # Ensure verified marker is gone so it gets re-verified
+            get_verified_file(data_file).unlink(missing_ok=True)
             invalid_files.append(data_file)
             continue
 
@@ -90,9 +90,8 @@ def validate_and_cleanup_invalid_checksums(data_files: list[Path]) -> list[Path]
                     f"🗑️  Empty checksum file: {checksum_file.name}, deleting..."
                 )
                 checksum_file.unlink()
-                # Also delete data file so both get redownloaded
-                if data_file.exists():
-                    data_file.unlink()
+                # Do NOT delete data file, only redownload checksum
+                get_verified_file(data_file).unlink(missing_ok=True)
                 invalid_files.append(data_file)
                 continue
 
@@ -105,8 +104,8 @@ def validate_and_cleanup_invalid_checksums(data_files: list[Path]) -> list[Path]
                     f"🗑️  Invalid checksum file: {checksum_file.name}, deleting..."
                 )
                 checksum_file.unlink()
-                if data_file.exists():
-                    data_file.unlink()
+                # Do NOT delete data file
+                get_verified_file(data_file).unlink(missing_ok=True)
                 invalid_files.append(data_file)
 
         except Exception as e:
@@ -114,8 +113,8 @@ def validate_and_cleanup_invalid_checksums(data_files: list[Path]) -> list[Path]
                 f"🗑️  Corrupted checksum file: {checksum_file.name}, deleting... ({e})"
             )
             checksum_file.unlink(missing_ok=True)
-            if data_file.exists():
-                data_file.unlink()
+            # Do NOT delete data file
+            get_verified_file(data_file).unlink(missing_ok=True)
             invalid_files.append(data_file)
 
     if invalid_files:
