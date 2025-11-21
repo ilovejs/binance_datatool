@@ -98,3 +98,30 @@ asyncio.run(main())
 ```
 
 See [examples/](examples/) for complete usage patterns including data download and processing workflows.
+
+## Invalid file resolution:
+
+### To Redownload the Invalid Files:
+Simply run the same command again:
+`uv run bhds aws-download configs/download/spot_1h.yaml`
+
+### What happens:
+The verifier already deleted the 4 invalid files (because `delete_mismatch: true`)
+The downloader will detect those 4 files are missing
+It will redownload only those 4 missing files
+The verification will run again
+### How It Works:
+Looking at `checksum.py:106-108`, when a file fails verification:
+If delete_mismatch: true, it calls `_cleanup_files()` which deletes:
+    The corrupted data file
+    The .verified marker file
+    The .CHECKSUM file
+Then when you run the download command again, those missing files will be redownloaded.
+
+### Alternative: Manual Investigation
+If you want to see which specific files failed, check if there were any error messages in the output above the verification summary.
+
+The failed files are tracked in results["errors"] at checksum.py:142, but they're not currently logged to the console. The current implementation only shows the count. 
+
+TL;DR: Just rerun uv run bhds aws-download configs/download/spot_1h.yaml - the 4 failed files were already deleted and will be redownloaded automatically.
+
