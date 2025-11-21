@@ -133,23 +133,44 @@ class AwsClient:
         return await self.list_dir(symbol_dir)
 
     async def batch_list_data_files(
-        self, symbols: list[str]
+        self, symbols: list[str], batch_size: int = 50
     ) -> dict[str, list[PurePosixPath]]:
         """
-        List data files for multiple symbols concurrently.
+        List data files for multiple symbols concurrently with batching.
 
-        Uses asyncio.gather to fetch file lists for all symbols in parallel,
-        improving performance for batch operations.
+        Uses asyncio.gather to fetch file lists in controlled batches,
+        preventing connection pool exhaustion.
 
         Args:
             symbols: List of trading symbols to list files for
+            batch_size: Number of concurrent requests per batch (default: 50)
 
         Returns:
             Dictionary mapping symbol names to their respective file lists
         """
-        tasks = [self.list_data_files(symbol) for symbol in symbols]
-        results = await asyncio.gather(*tasks)
-        return {symbol: list_result for symbol, list_result in zip(symbols, results)}
+        from tqdm import tqdm
+
+        from bdt_common.log_kit import logger
+
+        result_dict = {}
+        total_symbols = len(symbols)
+
+        # Process symbols in batches
+        for i in tqdm(
+            range(0, total_symbols, batch_size),
+            desc="Fetching file lists",
+            unit="batch",
+        ):
+            batch_symbols = symbols[i : i + batch_size]
+            tasks = [self.list_data_files(symbol) for symbol in batch_symbols]
+            batch_results = await asyncio.gather(*tasks)
+
+            # Add batch results to dict
+            for symbol, list_result in zip(batch_symbols, batch_results):
+                result_dict[symbol] = list_result
+
+        logger.info(f"📊 Fetched file lists for {total_symbols} symbols")
+        return result_dict
 
 
 def create_aws_client_from_config(

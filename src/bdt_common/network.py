@@ -60,14 +60,17 @@ async def async_retry_getter(
             _sleep_seconds *= 2
 
 
-def create_aiohttp_session(timeout_sec: int | float) -> aiohttp.ClientSession:
-    """Create an aiohttp ClientSession with specified timeout.
+def create_aiohttp_session(
+    timeout_sec: int | float, connector_limit: int = 100
+) -> aiohttp.ClientSession:
+    """Create an aiohttp ClientSession with specified timeout and connection limits.
 
-    Factory function to create a configured aiohttp ClientSession with a total timeout.
-    The session should be used as an async context manager to ensure proper cleanup.
+    Factory function to create a configured aiohttp ClientSession with a total timeout
+    and TCP connector limits to prevent overwhelming the connection pool.
 
     Args:
         timeout_sec: Total timeout in seconds for HTTP requests.
+        connector_limit: Maximum number of simultaneous connections (default: 100).
 
     Returns:
         aiohttp.ClientSession: Configured HTTP client session.
@@ -76,12 +79,13 @@ def create_aiohttp_session(timeout_sec: int | float) -> aiohttp.ClientSession:
         >>> async with create_aiohttp_session(30) as session:
         ...     async with session.get('https://api.example.com') as response:
         ...         data = await response.json()
-        
+
         >>> # Or for use in other async functions
         >>> session = create_aiohttp_session(10)
         >>> # Remember to close the session when done
         >>> await session.close()
     """
     timeout = aiohttp.ClientTimeout(total=timeout_sec)
-    session = aiohttp.ClientSession(timeout=timeout)
+    connector = aiohttp.TCPConnector(limit=connector_limit, limit_per_host=50)
+    session = aiohttp.ClientSession(timeout=timeout, connector=connector)
     return session
