@@ -33,3 +33,8 @@ use_proxy_for_aria2c: false
 # Checksum verification configuration
 checksum_verification:
   delete_mismatch: true # Delete files on checksum mismatch
+
+# Fast retry mode: Skip symbol listing when retrying failed files
+# Set to true to only retry failed files without checking for new files
+# This significantly speeds up retries (skips AWS API calls for symbol listing)
+retry_only: true  # Set to true for fast retry-only mode
